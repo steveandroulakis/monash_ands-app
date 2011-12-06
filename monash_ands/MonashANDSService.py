@@ -253,7 +253,7 @@ class MonashANDSService():
 
         if settings.OAI_DOCS_PATH:
             XMLWriter.write_template_to_file(
-                'rif',
+                '',
                 'collection',
                 experiment.id,
                 profile_template,
