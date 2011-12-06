@@ -1,0 +1,10 @@
+<registryObject group="Monash University">
+    <key>{{party_key}}</key>
+    <originatingSource type="authoritative">http://www.monash.edu.au</originatingSource>
+    <party type="person" dateModified="2010-07-02T14:33:40Z">
+        <identifier type="AU-ANL:PEAU">http://nla.gov.au/nla.party-1472325</identifier>
+        <name type="primary">
+            <namePart type="title">{{party}}</namePart>
+        </name>
+    </party>
+</registryObject>

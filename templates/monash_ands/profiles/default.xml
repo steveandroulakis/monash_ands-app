@@ -1,0 +1,51 @@
+{% load xmldate %}<registryObjects xmlns="http://ands.org.au/standards/rif-cs/registryObjects" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://ands.org.au/standards/rif-cs/registryObjects http://services.ands.org.au/documentation/rifcs/1.2.0/schema/registryObjects.xsd">
+   <registryObject group="Monash University">
+	<key>MYTARDIS-MONASH-{{experiment.id}}</key>
+	<originatingSource>http://mytardis.monash.edu.au</originatingSource>
+	<collection type="dataset" dateAccessioned="{{experiment.update_time|toxmldatetime}}" dateModified="{{experiment.update_time|toxmldatetime}}">
+		<identifier type="local">experiment/view/{{experiment.id}}</identifier>
+		<identifier type="handle">{{experiment.handle}}</identifier>
+		<name type="primary">
+			<namePart>{{experiment.title}}</namePart>
+		</name>
+		<location>
+			<address>
+				<electronic type="url">
+					<value>{{site_domain}}/experiment/view/{{experiment.id}}</value>
+                </electronic>
+            </address>
+        </location>
+		<location>
+			<address>
+                <physical>
+                    <addressPart type="text">{{experiment.institution_name}}</addressPart>
+                </physical>
+			</address>
+		</location>
+		<relatedObject>
+			<key>{{experiment.id}}</key>
+			<relation type="isOwnedBy">
+				<description>Is owned by</description>
+				<url>http://www.monash.edu.au</url>
+			</relation>
+		</relatedObject>
+		 {% for party_key in party_keys %}
+		   <relatedObject>
+				<key>{{party_key.party_param}}</key>
+				<relation type="{{party_key.relation_param}}"/>
+			</relatedObject>
+		{% endfor %}
+		{% for activity_key in activity_keys %}
+		   <relatedObject>
+				<key>{{activity_key}}</key>
+				<relation type="isOutputOf"/>
+			</relatedObject>
+		{% endfor %}
+
+        <description type="about">{% if custom_description %}{{custom_description}}{% else %}{{experiment.description}}{% endif %}</description>
+        <description type="accessRights">{% if experiment.public %}This experiment was publicly available at time of registration.{% else %}This experiment was closed access at time of registration.{% endif %}</description>
+        <description type="rights">{% if license_name %}{{license_name}}{% else %}No license at time of registration{% endif %}</description>
+
+    </collection>
+  </registryObject>
+</registryObjects>

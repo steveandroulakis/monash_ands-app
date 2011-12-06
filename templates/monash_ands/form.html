@@ -1,0 +1,295 @@
+{% load creativecommons %}
+{% if not disallowed_protocol %}
+<script type="text/javascript" charset="utf-8">
+	$(document).ready(function() {
+		$('.remove_party').live('click', function(e) {
+
+			$(this).parent().remove();
+		})
+		
+		function add_ldap_party()
+		{
+			val = $('#add_ldap_party_box').val();
+			
+			if(val)
+			{
+				// todo: get rid of (authcate) from ldap search
+				// todo: dupe authcate test
+				html = '<li class="party_list_member">' + 
+					'<select name="new-' + val + '-relation">' +
+					'<option value="isManagedBy">Is Managed By</option>' +
+					'<option value="isOwnedBy">Is Owned By</option>' +
+					'<option selected value="isEnrichedBy">Is Enriched By</option>' +
+					'</select>' +				    
+					' <strong>' +
+					val +
+					'</strong><input type="hidden" name="ldap_party" value="' +
+					val +
+					'"/>' +		
+					' <a class="remove_party"><img src="/site_media/images/icon_deletelink.gif"></a>' +
+					'</li>';
+
+				$(html).appendTo($('#ldap_party_list'));
+			
+				$('#add_ldap_party_box').val('');			
+			}
+		}
+		
+		$('#add_ldap_party_box').live('keyup', function(e) {
+		e.preventDefault();
+		if(e.keyCode == 13) {
+		    add_ldap_party();
+		}
+
+		});		
+		
+		$('#add_ldap_party').click(add_ldap_party);
+			
+	    $("#ands_register").click(function() {
+			if($('.party_list_member').size() > 0)
+			{
+				$('#jqmAlertLoading').jqmShow();
+				$.post("{% url tardis.apps.monash_ands.views.index experiment.id %}",
+				$("#ands_register_form").serialize(),
+				function(data) {
+				   $('#jqmAlertLoading').jqmHide();
+				   $('#ands_register_container').html(data);
+				 });			
+			}
+			else
+			{
+				alert('Must have at least one Monash Party member nominated!');
+			}
+	    });			
+
+
+        $("#add_ldap_party_box").autocomplete('/apps/monash_ands//ajax/ldap_list/', {
+          matchContains: true
+        });
+
+      $("#add_ldap_party_box").blur(function(event) {
+        $("#add_ldap_party_box").val($("#add_ldap_party_box").val());
+      });	
+
+	$('#registrantNotIncluded').click(function() {
+		  if ($('#registrantNotIncluded').is(':checked'))
+		  {
+			$("#registrant").hide();
+			$("#registrant").removeClass("party_list_member")
+			$("#registrantValue").attr("disabled", "disabled");
+		  }
+		  else
+		  {
+			 $("#registrant").show();
+			 $("#registrant").addClass("party_list_member")
+			 $("#registrantValue").removeAttr("disabled");
+	      }
+	
+	});
+	
+    $('#jqmAlertLoading').jqm({
+	ajax: '',
+	target: '',
+	overlay: 0,
+    });	
+
+});	
+		
+</script>
+{% endif %}
+<div class="jqmAlertLoading" id="jqmAlertLoading">
+  <div class="jqmAlertWindowLoading">
+    <div class="jqmAlertTitle clearfix">
+      <h1>Please Wait...</h1>
+    </div>
+    <div align="center" class="jqmAlertContentLoading" id="jqmAlertContentLoading">
+      <img src="/site_media/images/ajax-loader-big.gif">
+      </div>
+    </div>
+  </div>
+<div id="ands_register_container">
+<strong>ANDS Research Data Australia Registration</strong>
+{% if is_owner %}
+<p><img src="/site_media/images/ands-logo-hi-res.jpg"></p>
+<p>
+	{% if disallowed_protocol %}
+		<p>Sorry, ANDS registration is only available to those logged in through Monash Authcate.</p>
+	{% else %}
+	{% if not message %}
+	<form action="." method="POST" id="ands_register_form">
+	<h3>Licensing</h3>
+	<div class="white_box">
+		{% if not has_cc_license %}
+			No license is currently set for this experiment. If that's acceptable then continue. Otherwise, first go to the <a href="{% url tardis.tardis_portal.views.choose_license experiment.id %}">Choose License page to set it.</a>
+		{% else %}
+		<p>
+			Current experiment license is:
+		</p>
+		<p>
+			<div class="license_box">{{experiment.id|show_cc_license|safe}}</div>
+		</p>
+		<p>
+			If you'd like to change this, then go to the <a href="{% url tardis.tardis_portal.views.choose_license experiment.id %}">Choose License page before registering with ANDS.</a>
+		</p>
+		{% endif %}
+	</div>
+	<h3>Custom Description (Optional)</h3>
+	<div class="white_box">
+	<p>
+		Useful for situations in which you want to keep an experiment private and leave contact details instead of the current experiment description.
+	</p>	
+		<div>
+			<div class="party_box" align="center">
+			  <p>
+
+				<textarea id="custom_description" name="custom_description">{{custom_description}}</textarea>
+				</p>
+				<p>Leave blank to use the current Experiment Description below:</p>
+			  <p><small>
+				{% if experiment.description %}{{experiment.description}}{% else %}<em>None</em>{% endif %}
+			  </small>
+			  </p>
+			  </p>
+			</div>
+		</div>
+	</div>		
+	<h3>Related Researchers</h3>
+	<div class="white_box">
+		<div>
+		  <p>
+			<em>
+				Please choose related Monash researchers to this experiment. There must be at least one researcher associated.
+			</em>
+		  </p>
+		  <p>
+			<div class="party_box">
+				Current Associated Researchers<br/>
+				<ul>
+					{% for party in current_parties_ldap %}
+						<li class="party_list_member">
+							<select name="exists-{{party.party_id}}-relation">
+								<option {% if party.relation == "isManagedBy" %}selected{% endif %} value="isManagedBy">Is Managed By</option>
+								<option {% if party.relation == "isOwnedBy" %}selected{% endif %} value="isOwnedBy">Is Owned By</option>
+								<option {% if party.relation == "isEnrichedBy" %}selected{% endif %} value="isEnrichedBy">Is Enriched By</option>
+							</select>							
+							<strong>{{party.party_fullname}}</strong> (internal id: <strong>{{party.party_id}}</strong>)						
+							<input name="ldap_existing_party" value="{{party.party_id}}" type="hidden">
+							<a class="remove_party">
+								<img src="/site_media/images/icon_deletelink.gif">
+							</a>
+						</li>
+					{% endfor %}
+				</ul>				
+				
+				New Associated Researchers To Be Added..<br/>
+				<ul id="ldap_party_list">
+					{% if not registered %}
+						<li id="registrant" class="party_list_member">
+							<select name="new-{{usermail}}-relation">
+								<option value="isManagedBy">Is Managed By</option>
+								<option selected value="isOwnedBy">Is Owned By</option>
+								<option value="isEnrichedBy">Is Enriched By</option>
+							</select>							
+							<strong>{{usermail}}</strong>							
+							<input id="registrantValue" type="hidden" value="{{usermail}}" name="ldap_party">
+						</li>
+					{% endif %}
+				</ul>
+				<br/>
+				{% if not registered %}
+					<input type="checkbox" id="registrantNotIncluded"/>I do <strong>not</strong> wish to be listed as a researcher in this experiment.
+				{% endif %}
+			  </p>
+		
+			<p>
+				<label>Add researcher (enter their Monash University email address):</label>
+			</p>
+			<p>
+				<input type="text" style="width: 300px" maxlength="100" name="ldap_party_add" class="usersuggest ac_input" id="add_ldap_party_box" autocomplete="off">		
+				<a id="add_ldap_party">Submit</a>			
+			</p>
+			</div>				
+		</div>
+	</div>
+</p>
+
+<p>
+	<h3>Related Projects</h3>
+	<div class="white_box">
+		{% if activity_summaries %}
+		<p><em>The following projects were retrieved for {{username}}... Please select projects related to this experiment..</em>
+		</p>
+		{% for activity_summary in activity_summaries %}
+			<div class="activity_summary">
+				<strong>Grant ID:</strong> {{ activity_summary.projectId }}<br/>
+				<strong>Title:</strong> {{ activity_summary.projectTitle }}<br/>
+				<strong>Grantor Code:</strong> {{ activity_summary.grantorCode }}<br/>
+				<strong>Date Applied:</strong> {{ activity_summary.projectDateApplied }}<br/>
+				<br/>
+				<div align="right"><strong>Include this project</strong>
+					<input type="checkbox" name="activity" {% for a in current_activities %}{% ifequal activity_summary.projectId a.string_value %} checked {% endifequal %}{% endfor %} value="{{activity_summary.projectId}}">
+				</div>
+			</div>
+		{% endfor %}
+		{% else %}
+			<p>
+				No projects found for {{username}}. Please proceed.
+			</p>
+		{% endif %}
+	</div>
+
+    {% if not has_doi %}
+	<h3>DOI Minting</h3>
+	<div class="white_box">
+		<div>
+			<div class="party_box">
+				<p>
+					<input type="checkbox" name="mint_doi" value="mint_doi" checked/>I would like to mint a DOI as part of my registration. <a href="#">What's this?</a>
+				</p>
+			</div>
+		</div>
+	</div>
+    {% endif %}
+
+	<h3>Profile</h3>
+	<div class="white_box">
+		<div>
+			<div class="party_box">
+				<p>
+					Register under this domain-specific profile (leave 'default' if unsure):
+					{% if rif_cs_profiles %}
+					<select name="profile">
+						{% for profile in rif_cs_profiles %}
+							<option value="{{profile}}" {% if profile == selected_profile %}selected{% endif %}>{{profile}}</option>
+						{% endfor %}
+					</select>
+					{% else %}
+						<p>Error: no valid profiles found.</p>
+					{% endif %}
+				</p>
+			</div>
+		</div>
+	</div>	
+	
+	<input id="ands_register" type="button" value="Register Experiment"/>
+	</form>
+	{% else %}
+	<div class="white_box">
+		{% if status %}
+			<h3>ANDS Registration Successful</h3>
+		{% else %}
+			<h3><span style="color: red;">ANDS Registration Failed</span></h3>
+			
+			{{message|safe}}
+		{% endif %}	
+	</div>	
+	{% endif %}
+	{% endif %}	
+</p>
+{% else %}
+<p>
+	You must be an experiment owner to register with ANDS.
+</p>
+{% endif %}
+
+</div>
