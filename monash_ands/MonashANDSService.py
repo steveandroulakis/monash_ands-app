@@ -297,6 +297,10 @@ class MonashANDSService():
         pai = pais.get_pai()
         # already has entries
 
+        import sys
+        mas_settings = sys.modules['%s.%s.settings' %
+                    (settings.TARDIS_APP_ROOT, 'monash_ands')]
+
         schema = 'http://localhost/pilot/collection/1.0/'
 
         psm = \
@@ -345,6 +349,10 @@ class MonashANDSService():
         if self.has_registration_record():
             registered = True
 
+        doi_enabled = False
+        if mas_settings.DOI_ENABLE:
+            doi_enabled = True
+
         return {"activity_summaries":
                     activity_summaries,
                 "current_activities":
@@ -362,7 +370,8 @@ class MonashANDSService():
                 "usermail":
                     usermail,
                 "has_doi":
-                    self.has_doi()
+                    self.has_doi(),
+                "doi_enabled": doi_enabled,
                 }
 
     def save_party_parameter(self, experiment, party_param, relation_param):
