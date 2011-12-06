@@ -87,48 +87,60 @@ class MonashANDSService():
             for email in request.POST.getlist('ldap_party'):
                 if str(email):
 
-                    monash_id = ""
-                    try:
+                    import sys
+                    mas_settings = sys.modules['%s.%s.settings' %
+                                (settings.TARDIS_APP_ROOT, 'monash_ands')]
 
-                        l = LDAPUserQuery()
+                    if mas_settings.ALLOWED_PROTOCOL == "ldap":
+                        monash_id = ""
+                        try:
 
-                        authcate = []
-                        authcate.append([LDAPUserQuery.get_user_attr(u, 'uid')\
-                            for u in \
-                            l.get_authcate_exact(email)])
+                            l = LDAPUserQuery()
 
-                        monash_id = pai.get_unique_party_id(authcate[0][0])
+                            authcate = []
+                            authcate.append([LDAPUserQuery.get_user_attr(u, 'uid')\
+                                for u in \
+                                l.get_authcate_exact(email)])
+
+                            monash_id = pai.get_unique_party_id(authcate[0][0])
+                            relation_name = 'new-' + email + '-relation'
+                            if relation_name in request.POST:
+                                monash_id_list.append(\
+                                    {'party_param': monash_id,
+                                    'relation_param': request.POST[relation_name]})
+
+                        except urllib2.URLError:
+                            fail = True
+                            logger.error("Can't contact research" +
+                                " master web service")
+
+                            message = message + \
+                            'Error: Cannot contact Activity' + \
+                            ' / Party Service. Please try again later.' \
+                            + "<br/>"
+                        except IndexError:
+                            logger.error("Can't contact ldap for " +
+                                email)
+                            fail = True
+                            error = "Can't get authcate for email address: " + email\
+                            + "<br/>"
+
+                            message = message + "<br/>" + error
+                        except KeyError:
+                            logger.error("Couldn't find authcate for " +
+                                email)
+                            fail = True
+                            error = "Can't get authcate for email address: " + email\
+                            + "<br/>"
+
+                            message = message + "<br/>" + error
+                    else:
+                        # if not hooked up to ldap
                         relation_name = 'new-' + email + '-relation'
                         if relation_name in request.POST:
                             monash_id_list.append(\
-                                {'party_param': monash_id,
+                                {'party_param': email,
                                 'relation_param': request.POST[relation_name]})
-
-                    except urllib2.URLError:
-                        fail = True
-                        logger.error("Can't contact research" +
-                            " master web service")
-
-                        message = message + \
-                        'Error: Cannot contact Activity' + \
-                        ' / Party Service. Please try again later.' \
-                        + "<br/>"
-                    except IndexError:
-                        logger.error("Can't contact ldap for " +
-                            email)
-                        fail = True
-                        error = "Can't get authcate for email address: " + email\
-                        + "<br/>"
-
-                        message = message + "<br/>" + error
-                    except KeyError:
-                        logger.error("Couldn't find authcate for " +
-                            email)
-                        fail = True
-                        error = "Can't get authcate for email address: " + email\
-                        + "<br/>"
-
-                        message = message + "<br/>" + error
 
             if fail:
                 return {'status': False,
@@ -191,7 +203,7 @@ class MonashANDSService():
         if 'custom_description' in request.POST:
             custom_description = request.POST['custom_description']
 
-            if custom_description:
+            if custom_description and len(custom_description):
                 schema = 'http://localhost/pilot/collection/1.0/'
 
                 psm = \
@@ -304,15 +316,16 @@ class MonashANDSService():
         schema = 'http://localhost/pilot/collection/1.0/'
 
         psm = \
-            self.get_or_create_parameterset(schema)
+            self.get_or_create_parameterset(schema, create=False)
 
         custom_description = ""
 
-        try:
-            custom_description = psm.get_param("custom_description",
-                True)
-        except ExperimentParameter.DoesNotExist:
-            pass
+        if psm:
+            try:
+                custom_description = psm.get_param("custom_description",
+                    True)
+            except ExperimentParameter.DoesNotExist:
+                pass
 
         monash_id = ""
         try:
@@ -422,9 +435,10 @@ class MonashANDSService():
         namespace = "http://localhost/pilot/activity/1.0/"
 
         psm = \
-            self.get_or_create_parameterset(namespace)
+            self.get_or_create_parameterset(namespace, create=False)
 
-        psm.delete_params('activity_id')
+        if psm:
+            psm.delete_params('activity_id')
 
     def get_existing_ldap_party_info(self):
         pais = PartyActivityInformationService()
@@ -525,12 +539,13 @@ class MonashANDSService():
         """
         namespace = 'http://monash.edu.au/rif-cs/profile/'
 
-        psm = self.get_or_create_parameterset(namespace)
+        psm = self.get_or_create_parameterset(namespace, create=False)
 
-        try:
-            return psm.get_param('profile', value=True)
-        except ExperimentParameter.DoesNotExist:
-            return None
+        if psm:
+            try:
+                return psm.get_param('profile', value=True)
+            except ExperimentParameter.DoesNotExist:
+                return None
 
     def has_registration_record(self):
         """
@@ -562,7 +577,7 @@ class MonashANDSService():
         else:
             return False
 
-    def get_or_create_parameterset(self, schema):
+    def get_or_create_parameterset(self, schema, create=True):
         parameterset = ExperimentParameterSet.objects.filter(
         schema__namespace=schema,
         experiment__id=self.experiment_id)
@@ -571,12 +586,16 @@ class MonashANDSService():
 
         psm = None
         if not len(parameterset):
-            psm = ParameterSetManager(schema=schema,
-                    parentObject=experiment)
+            if create:
+                psm = ParameterSetManager(schema=schema,
+                        parentObject=experiment)
+                return psm
+            else:
+                return False
         else:
             psm = ParameterSetManager(parameterset=parameterset[0])
+            return psm
 
-        return psm
 
     def get_or_create_unique_parameterset(self, schema, parametername, value):
         parameterset = ExperimentParameterSet.objects.filter(

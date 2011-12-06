@@ -36,11 +36,10 @@
 		}
 		
 		$('#add_ldap_party_box').live('keyup', function(e) {
-		e.preventDefault();
-		if(e.keyCode == 13) {
-		    add_ldap_party();
-		}
-
+			e.preventDefault();
+			if(e.keyCode == 13) {
+			    add_ldap_party();
+			}
 		});		
 		
 		$('#add_ldap_party').click(add_ldap_party);
@@ -94,6 +93,16 @@
     });	
 
 });	
+
+// fix to prevent form submit on hitting enter on input fields
+$(document).ready(function() {
+  $(window).keydown(function(event){
+    if(event.keyCode == 13) {
+      event.preventDefault();
+      return false;
+    }
+  });
+});
 		
 </script>
 {% endif %}
@@ -237,7 +246,8 @@
 			</p>
 		{% endif %}
 	</div>
-
+	
+	{% if doi_enabled %}
     {% if not has_doi %}
 	<h3>DOI Minting</h3>
 	<div class="white_box">
@@ -250,6 +260,7 @@
 		</div>
 	</div>
     {% endif %}
+	{% endif %}
 
 	<h3>Profile</h3>
 	<div class="white_box">
